@@ -7,7 +7,13 @@
 #include <vector>
 
 #include <limits.h>
+#if defined(__APPLE__)
 #include <mach-o/dyld.h>
+#elif defined(__linux__)
+#include <unistd.h>
+#else
+#error "main_posix.cc requires macOS or Linux"
+#endif
 
 #include "zenz/zenz_unix_socket_path.h"
 #include "zenz_scorer/posix_runtime.h"
@@ -34,6 +40,7 @@ std::string JoinPath(std::string_view directory, std::string_view name) {
 }
 
 std::string GetExecutablePath() {
+#if defined(__APPLE__)
   uint32_t size = PATH_MAX;
   std::vector<char> buffer(size, '\0');
   if (_NSGetExecutablePath(buffer.data(), &size) != 0) {
@@ -48,6 +55,30 @@ std::string GetExecutablePath() {
     return resolved;
   }
   return buffer.data();
+#elif defined(__linux__)
+  std::vector<char> buffer(PATH_MAX, '\0');
+  while (true) {
+    const ssize_t len =
+        ::readlink("/proc/self/exe", buffer.data(), buffer.size());
+    if (len < 0) {
+      return "";
+    }
+    if (static_cast<size_t>(len) < buffer.size()) {
+      buffer[static_cast<size_t>(len)] = '\0';
+      break;
+    }
+    if (buffer.size() >= 1024 * 1024) {
+      return "";
+    }
+    buffer.assign(buffer.size() * 2, '\0');
+  }
+
+  char resolved[PATH_MAX] = {};
+  if (::realpath(buffer.data(), resolved) != nullptr) {
+    return resolved;
+  }
+  return buffer.data();
+#endif
 }
 
 std::string DirectoryName(std::string_view path) {

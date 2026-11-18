@@ -1,7 +1,7 @@
 // Dedicated owner of a single llama-server child.  The scorer is the only
 // writer of the lifetime pipe; EOF also works when the scorer is SIGKILLed.
-#if !defined(__APPLE__)
-#error "llama_server_guard is only supported on macOS"
+#if !defined(__APPLE__) && !defined(__linux__)
+#error "llama_server_guard is only supported on macOS and Linux"
 #endif
 
 #include <cerrno>

@@ -18,7 +18,9 @@
 #include <vector>
 
 #include <arpa/inet.h>
+#if defined(__APPLE__)
 #include <crt_externs.h>
+#endif
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <poll.h>
@@ -32,9 +34,29 @@
 #include "zenz_scorer/llama_http_client.h"
 #include "zenz_scorer/llama_server_guard_protocol.h"
 
+#if !defined(__APPLE__)
+extern "C" char** environ;
+#endif
+
 namespace mozc {
 namespace zenz_scorer {
 namespace {
+
+char* const* GetProcessEnviron() {
+#if defined(__APPLE__)
+  return *_NSGetEnviron();
+#else
+  return environ;
+#endif
+}
+
+int SendFlags() {
+#if defined(MSG_NOSIGNAL)
+  return MSG_NOSIGNAL;
+#else
+  return 0;
+#endif
+}
 
 constexpr size_t kApiKeyBytes = 32;
 constexpr int kMinimumContextSize = 64;
@@ -521,8 +543,7 @@ bool LlamaServerProcess::Spawn(std::string* error) {
     return false;
   }
 
-  // macOS SO_NOSIGPIPE prevents a dead guard from terminating the scorer
-  // while transferring a 64-byte key. No global signal handler is changed.
+  // Avoid SIGPIPE on a dead guard while transferring the 64-byte key.
 #if defined(SO_NOSIGPIPE)
   const int enabled = 1;
   if (::setsockopt(key_channel[0], SOL_SOCKET, SO_NOSIGPIPE,
@@ -534,7 +555,7 @@ bool LlamaServerProcess::Spawn(std::string* error) {
     *error = "guard_key_channel_nosigpipe_failed";
     return false;
   }
-#else
+#elif !defined(MSG_NOSIGNAL)
   ClosePipe(output_pipe);
   ClosePipe(lifetime_pipe);
   ClosePipe(startup_pipe);
@@ -599,7 +620,8 @@ bool LlamaServerProcess::Spawn(std::string* error) {
   pid_t guard_pid = -1;
   if (result == 0) {
     result = ::posix_spawn(&guard_pid, options_.guard_executable_path.c_str(),
-                           &actions, &attributes, argv.data(), *_NSGetEnviron());
+                           &actions, &attributes, argv.data(),
+                           GetProcessEnviron());
   }
   if (attr_initialized) {
     ::posix_spawnattr_destroy(&attributes);
@@ -629,7 +651,7 @@ bool LlamaServerProcess::Spawn(std::string* error) {
   size_t key_bytes = 0;
   while (key_bytes < api_key_.size()) {
     const ssize_t sent = ::send(key_channel[0],
-        api_key_.data() + key_bytes, api_key_.size() - key_bytes, 0);
+        api_key_.data() + key_bytes, api_key_.size() - key_bytes, SendFlags());
     if (sent > 0) {
       key_bytes += static_cast<size_t>(sent);
     } else if (sent < 0 && errno == EINTR) {
