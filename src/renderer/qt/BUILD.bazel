@@ -144,12 +144,35 @@ mozc_cc_test(
     ],
 )
 
+mozc_cc_library(
+    name = "qt_screen_coordinates",
+    srcs = ["qt_screen_coordinates.cc"],
+    hdrs = ["qt_screen_coordinates.h"],
+    deps = [
+        "//base:coordinates",
+        "//protocol:renderer_cc_proto",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+mozc_cc_test(
+    name = "qt_screen_coordinates_test",
+    srcs = ["qt_screen_coordinates_test.cc"],
+    deps = [
+        ":qt_screen_coordinates",
+        "//base:coordinates",
+        "//protocol:renderer_cc_proto",
+        "//testing:gunit_main",
+    ],
+)
+
 mozc_cc_qt_library(
     name = "qt_window_manager",
     srcs = ["qt_window_manager.cc"],
     hdrs = ["qt_window_manager.h"],
     deps = [
         ":qt_candidate_footer",
+        ":qt_screen_coordinates",
         "//base:coordinates",
         "//client:client_interface",
         "//protocol:candidate_window_cc_proto",

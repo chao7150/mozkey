@@ -38,6 +38,7 @@
 #include <QScrollBar>
 #include <QStyle>
 #include <QStringList>
+#include <QWindow>
 
 #include <algorithm>
 #include <cmath>
@@ -45,7 +46,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <limits>
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
@@ -56,6 +56,7 @@
 #include "protocol/candidate_window.pb.h"
 #include "protocol/commands.pb.h"
 #include "renderer/qt/qt_candidate_footer.h"
+#include "renderer/qt/qt_screen_coordinates.h"
 #include "renderer/renderer_style_handler.h"
 #include "renderer/window_util.h"
 #include "renderer/window_effect_util.h"
@@ -172,18 +173,28 @@ QtWindowShadow::QtWindowShadow()
   hide();
 }
 
+void AssignWidgetScreen(QWidget* widget, QScreen* screen) {
+  if (widget != nullptr && screen != nullptr &&
+      widget->windowHandle() != nullptr &&
+      widget->windowHandle()->screen() != screen) {
+    widget->windowHandle()->setScreen(screen);
+  }
+}
+
 void QtWindowShadow::UpdateFor(
-    const QWidget* owner, uint32_t corner_radius,
+    const QRect& owner_geometry, QScreen* screen, uint32_t corner_radius,
     const RendererStyleHandler::WindowShadowStyle& style) {
-  if (!owner || style.size == 0 || style.opacity_percent == 0) {
+  if (owner_geometry.width() <= 0 || owner_geometry.height() <= 0 ||
+      style.size == 0 || style.opacity_percent == 0) {
     hide();
     return;
   }
-  const QScreen* screen = owner->screen();
-  const qreal dpr = std::clamp(screen ? screen->devicePixelRatio() : 1.0,
-                               1.0, 4.0);
-  const int physical_width = std::max(1, qRound(owner->width() * dpr));
-  const int physical_height = std::max(1, qRound(owner->height() * dpr));
+  const QScreen* effective_screen =
+      screen != nullptr ? screen : this->screen();
+  const qreal dpr = std::clamp(
+      effective_screen ? effective_screen->devicePixelRatio() : 1.0, 1.0, 4.0);
+  const int physical_width = std::max(1, qRound(owner_geometry.width() * dpr));
+  const int physical_height = std::max(1, qRound(owner_geometry.height() * dpr));
   const int physical_size = qRound(std::min(style.size, 96u) * dpr);
   const int physical_distance = qRound(std::min(style.distance, 96u) * dpr);
   const int physical_radius = qRound(std::min(corner_radius, 24u) * dpr);
@@ -228,12 +239,21 @@ void QtWindowShadow::UpdateFor(
   }
   const QSize target_size(qCeil(shadow_geometry.width / dpr),
                           qCeil(shadow_geometry.height / dpr));
-  const QPoint target_pos = owner->pos() -
+  const QPoint target_pos = owner_geometry.topLeft() -
       QPoint(qRound(shadow_geometry.owner_left / dpr),
              qRound(shadow_geometry.owner_top / dpr));
   const QRect target_geometry(target_pos, target_size);
-  const bool geometry_changed = geometry() != target_geometry;
-  if (geometry_changed) setGeometry(target_geometry);
+  // Assign screen and compare against `last_target_geometry_` as well as
+  // `geometry()`: right after cross-screen moves on Qt XCB, `geometry()` can
+  // transiently reflect the pre-ConfigureNotify X11 coordinates on the new
+  // screen.
+  AssignWidgetScreen(this, screen);
+  const bool geometry_changed =
+      target_geometry != last_target_geometry_ || geometry() != target_geometry;
+  if (geometry_changed) {
+    setGeometry(target_geometry);
+    last_target_geometry_ = target_geometry;
+  }
   if (!isVisible()) show();
   if (image_changed || geometry_changed) update();
 }
@@ -530,12 +550,6 @@ Rect GetRect(const QRect& qrect) {
   return Rect(qrect.x(), qrect.y(), qrect.width(), qrect.height());
 }
 
-Rect GetRect(const commands::RendererCommand::Rectangle& prect) {
-  const int width = prect.right() - prect.left();
-  const int height = prect.bottom() - prect.top();
-  return Rect(prect.left(), prect.top(), width, height);
-}
-
 bool IsUpdated(const commands::RendererCommand& prev_command,
                const commands::RendererCommand& new_command) {
   if (!prev_command.has_output() || !new_command.has_output()) {
@@ -757,92 +771,74 @@ void FillCandidateWindow(const commands::CandidateWindow& candidate_window,
   table->resize(width + 2 * border, total_height + 2 * border);
 }
 
-class VirtualRect {
- public:
-  static VirtualRect FromNativeRect(const Rect& native_rect) {
-    for (const QScreen* screen : QGuiApplication::screens()) {
-      const Rect rect = TranslateToVirtual(screen, native_rect);
-      const QRect screen_rect = screen->geometry();
-
-      // Use top left to locate a screen
-      if (screen_rect.contains(rect.Left(), rect.Top())) {
-        return VirtualRect(rect, mozc::renderer::GetRect(screen->availableGeometry()));
-      }
-    }
-
-    // If the caret is just outside a monitor (or mixed-DPI conversion is
-    // ambiguous), pick the closest available working area, not the primary
-    // monitor unconditionally.
-    const QScreen* screen = QGuiApplication::primaryScreen();
-    qint64 best_distance = std::numeric_limits<qint64>::max();
-    for (const QScreen* candidate : QGuiApplication::screens()) {
-      const Rect rect = TranslateToVirtual(candidate, native_rect);
-      const QRect area = candidate->availableGeometry();
-      const qint64 dx = std::max<qint64>(
-          {static_cast<qint64>(area.left()) - rect.Left(), 0,
-           static_cast<qint64>(rect.Left()) - area.right()});
-      const qint64 dy = std::max<qint64>(
-          {static_cast<qint64>(area.top()) - rect.Top(), 0,
-           static_cast<qint64>(rect.Top()) - area.bottom()});
-      const qint64 distance = dx * dx + dy * dy;
-      if (distance < best_distance) {
-        best_distance = distance;
-        screen = candidate;
-      }
-    }
-    if (screen == nullptr) return VirtualRect(native_rect, native_rect);
-    const Rect rect = TranslateToVirtual(screen, native_rect);
-    return VirtualRect(rect, mozc::renderer::GetRect(screen->availableGeometry()));
+std::vector<QtScreenGeometry> CaptureQtScreenGeometries(
+    QList<QScreen*>* out_qscreens, int* primary_screen_index) {
+  const auto qscreens = QGuiApplication::screens();
+  const QScreen* primary = QGuiApplication::primaryScreen();
+  int primary_idx = -1;
+  std::vector<QtScreenGeometry> screens;
+  screens.reserve(qscreens.size());
+  if (out_qscreens != nullptr) {
+    out_qscreens->clear();
+    out_qscreens->reserve(qscreens.size());
   }
-
-  Rect GetRect() const { return rect_; }
-
-  Rect GetMonitorRect() const { return monitor_rect_; }
-
- private:
-  VirtualRect(const Rect& rect, const Rect& monitor_rect)
-      : rect_(rect), monitor_rect_(monitor_rect) {}
-
-  static Rect TranslateToVirtual(const QScreen* screen,
-                                 const Rect& native_rect) {
-    const double device_pixel_ratio = screen->devicePixelRatio();
-    // screen_left, screen_top have the same value in both virtual and native
-    // coordinate
-    const int screen_left = screen->geometry().x();
-    const int screen_top = screen->geometry().y();
-    const int dx = native_rect.Left() - screen_left;
-    const int dy = native_rect.Top() - screen_top;
-    const int vx =
-        static_cast<int>(std::floor(dx / device_pixel_ratio)) + screen_left;
-    const int vy =
-        static_cast<int>(std::floor(dy / device_pixel_ratio)) + screen_top;
-
-    return Rect(vx, vy, native_rect.Width() / device_pixel_ratio,
-                native_rect.Height() / device_pixel_ratio);
+  for (int i = 0; i < qscreens.size(); ++i) {
+    QScreen* screen = qscreens[i];
+    if (screen == nullptr) {
+      continue;
+    }
+    if (screen == primary) {
+      primary_idx = static_cast<int>(screens.size());
+    }
+    if (out_qscreens != nullptr) {
+      out_qscreens->push_back(screen);
+    }
+    screens.push_back(QtScreenGeometry{
+        screen->name().toStdString(),
+        GetRect(screen->geometry()),
+        GetRect(screen->availableGeometry()),
+        screen->devicePixelRatio(),
+    });
   }
+  if (primary_screen_index != nullptr) {
+    *primary_screen_index = primary_idx;
+  }
+  return screens;
+}
 
-  Rect rect_;
-  Rect monitor_rect_;
+struct WindowPlacement {
+  Point origin;
+  QScreen* screen = nullptr;
 };
-}  // namespace
 
-Point QtWindowManager::GetWindowPosition(
+WindowPlacement ResolveWindowPlacement(
     const commands::RendererCommand& command, const Size& win_size) {
-  const Rect native_preedit_rect = GetRect(command.preedit_rectangle());
-  // Qt6 applications use virtual coordinates. Since IBus uses the device-pixel
-  // native coordinate system, we need to translate a received rect to virtual.
-  const VirtualRect virtual_rect =
-      VirtualRect::FromNativeRect(native_preedit_rect);
-  const Rect preedit_rect = virtual_rect.GetRect();
+  QList<QScreen*> qscreens;
+  int primary_index = -1;
+  const std::vector<QtScreenGeometry> screens =
+      CaptureQtScreenGeometries(&qscreens, &primary_index);
+  const ResolvedScreenRect resolved =
+      ResolvePreeditAndMonitorRect(command, screens, primary_index);
+  const Rect preedit_rect = resolved.preedit_rect;
   const Point win_pos = Point(preedit_rect.Left(), preedit_rect.Bottom());
-  const Rect monitor_rect = virtual_rect.GetMonitorRect();
+  const Rect monitor_rect = resolved.monitor_rect;
   const Point offset_to_column1(kColumn0Width, 0);
 
   const Rect adjusted_win_geometry =
       WindowUtil::GetWindowRectForMainWindowFromTargetPointAndPreedit(
           win_pos, preedit_rect, win_size, offset_to_column1, monitor_rect,
           /* vertical */ false);  // Only support horizontal window yet.
-  return adjusted_win_geometry.origin;
+  QScreen* screen =
+      (resolved.screen_index >= 0 && resolved.screen_index < qscreens.size())
+          ? qscreens[resolved.screen_index]
+          : QGuiApplication::primaryScreen();
+  return {adjusted_win_geometry.origin, screen};
+}
+}  // namespace
+
+Point QtWindowManager::GetWindowPosition(
+    const commands::RendererCommand& command, const Size& win_size) {
+  return ResolveWindowPlacement(command, win_size).origin;
 }
 
 Rect QtWindowManager::UpdateCandidateWindow(
@@ -882,7 +878,9 @@ Rect QtWindowManager::UpdateCandidateWindow(
   ApplyCandidateWindowShape(candidates_, candidate_clip_, corner_radius,
                             effects.opacity_percent);
   const Size win_size(candidates_->width(), candidates_->height());
-  const Point win_pos = GetWindowPosition(command, win_size);
+  const WindowPlacement placement = ResolveWindowPlacement(command, win_size);
+  const Point win_pos = placement.origin;
+  AssignWidgetScreen(candidates_, placement.screen);
   candidates_->move(win_pos.x, win_pos.y);
 
   // Set the focused highlight
@@ -910,11 +908,16 @@ Rect QtWindowManager::UpdateCandidateWindow(
       QColorFromRGBAColor(style_.scrollbar_indicator_color()));
   page_indicator_->raise();
 
-  candidate_shadow_->UpdateFor(candidates_, corner_radius, effects.shadow);
+  // Pass the target QRect explicitly instead of reading `candidates_->geometry()`:
+  // immediately after a cross-screen move on XCB, Qt computes pos() from stale
+  // native X11 coordinates against the newly assigned QScreen until ConfigureNotify.
+  const QRect target_rect(win_pos.x, win_pos.y, win_size.width, win_size.height);
+  candidate_shadow_->UpdateFor(target_rect, placement.screen, corner_radius,
+                               effects.shadow);
   candidates_->show();
   candidates_->raise();
   prev_command_ = command;
-  return GetRect(candidates_->geometry());
+  return Rect(win_pos, win_size);
 }
 
 bool QtWindowManager::ShouldShowInfolistWindow(
@@ -952,16 +955,10 @@ bool QtWindowManager::ShouldShowInfolistWindow(
 }
 
 Rect QtWindowManager::GetMonitorRect(int x, int y) {
-  QPoint point{x, y};
-  const QScreen* screen = QGuiApplication::screenAt(point);
-  if (screen == nullptr) {
-    // (x, y) does not belong to any screen. Fall back to the primary screen.
-    // TODO: Return the nearest monitor rect instead.
-    // c.f. GetWorkingAreaFromPointImpl in win32_renderer_util.cc.
-    return GetRect(QGuiApplication::primaryScreen()->availableGeometry());
-  }
-
-  return GetRect(screen->availableGeometry());
+  int primary_index = -1;
+  const std::vector<QtScreenGeometry> screens =
+      CaptureQtScreenGeometries(nullptr, &primary_index);
+  return ResolveMonitorRectForVirtualPoint(Point(x, y), screens, primary_index);
 }
 
 void QtWindowManager::UpdateInfolistWindow(
@@ -982,8 +979,18 @@ void QtWindowManager::UpdateInfolistWindow(
   infolist_->setColumnCount(1);
   infolist_->setRowCount(size * 2 + 1);  // +1 is for the caption title.
 
-  const Rect monitor_rect = GetMonitorRect(candidate_window_rect.Right(),
-                                           candidate_window_rect.Top());
+  QList<QScreen*> qscreens;
+  int primary_index = -1;
+  const std::vector<QtScreenGeometry> screens =
+      CaptureQtScreenGeometries(&qscreens, &primary_index);
+  const ResolvedMonitorRect resolved_monitor = ResolveInfolistMonitor(
+      command, candidate_window_rect, screens, primary_index);
+  const Rect monitor_rect = resolved_monitor.monitor_rect;
+  QScreen* infolist_screen =
+      (resolved_monitor.screen_index >= 0 &&
+       resolved_monitor.screen_index < qscreens.size())
+          ? qscreens[resolved_monitor.screen_index]
+          : QGuiApplication::primaryScreen();
   const int border = std::clamp(style_.infolist_style().window_border(), 0, 4);
   int natural_width = kInfolistMinWidth;
 
@@ -1074,6 +1081,7 @@ void QtWindowManager::UpdateInfolistWindow(
   const Rect infolist_rect = WindowUtil::GetWindowRectForInfolistWindow(
       infolist_size, candidate_window_rect, monitor_rect);
 
+  AssignWidgetScreen(infolist_, infolist_screen);
   infolist_->move(infolist_rect.Left(), infolist_rect.Top());
   infolist_->resize(width, height);
   // A new focused entry starts at the top; overflowing descriptions remain
@@ -1087,7 +1095,10 @@ void QtWindowManager::UpdateInfolistWindow(
       RendererStyleHandler::GetCandidateWindowCornerRadius(active_style_type_);
   ApplyCandidateWindowShape(infolist_, infolist_clip_, radius,
                             effects.opacity_percent);
-  infolist_shadow_->UpdateFor(infolist_, radius, effects.shadow);
+  const QRect infolist_target_rect(infolist_rect.Left(), infolist_rect.Top(),
+                                   width, height);
+  infolist_shadow_->UpdateFor(infolist_target_rect, infolist_screen, radius,
+                              effects.shadow);
   infolist_->show();
   infolist_->raise();
 }

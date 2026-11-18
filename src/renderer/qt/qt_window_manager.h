@@ -94,7 +94,8 @@ class CandidatePageIndicator : public QWidget {
 class QtWindowShadow : public QWidget {
  public:
   QtWindowShadow();
-  void UpdateFor(const QWidget* owner, uint32_t corner_radius,
+  void UpdateFor(const QRect& owner_geometry, QScreen* screen,
+                 uint32_t corner_radius,
                  const RendererStyleHandler::WindowShadowStyle& style);
 
  protected:
@@ -103,6 +104,7 @@ class QtWindowShadow : public QWidget {
  private:
   QImage image_;
   std::array<int, 8> cache_key_{};
+  QRect last_target_geometry_;
   bool has_cache_ = false;
 };
 
