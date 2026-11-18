@@ -5,6 +5,13 @@
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #if TARGET_OS_OSX
+#define MOZC_ENABLE_POSIX_ZENZ_CLIENT 1
+#endif  // TARGET_OS_OSX
+#elif defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS)
+#define MOZC_ENABLE_POSIX_ZENZ_CLIENT 1
+#endif  // __APPLE__ / Linux desktop
+
+#ifdef MOZC_ENABLE_POSIX_ZENZ_CLIENT
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -16,8 +23,7 @@
 #include <vector>
 
 #include "base/process.h"
-#endif  // TARGET_OS_OSX
-#endif  // __APPLE__
+#endif  // MOZC_ENABLE_POSIX_ZENZ_CLIENT
 
 #include "session/zenz_live_corrector.h"
 #include "testing/gunit.h"
@@ -30,14 +36,14 @@ TEST(ZenzClientFactoryTest, CreatesCurrentPlatformClient) {
   std::unique_ptr<ZenzClient> client = CreateZenzClient();
   ASSERT_NE(client, nullptr);
 
-#if defined(_WIN32) || (defined(__APPLE__) && TARGET_OS_OSX)
+#if defined(_WIN32) || defined(MOZC_ENABLE_POSIX_ZENZ_CLIENT)
   EXPECT_TRUE(client->IsAvailable());
 #else
   EXPECT_FALSE(client->IsAvailable());
 #endif
 }
 
-#if defined(__APPLE__) && TARGET_OS_OSX
+#ifdef MOZC_ENABLE_POSIX_ZENZ_CLIENT
 
 // These tests launch only test-owned child processes; they do not start the
 // installed Zenz service or send signals to unrelated system processes.
@@ -143,7 +149,7 @@ TEST(ZenzClientFactoryTest, ReapsRepeatedRapidExits) {
   }
 }
 
-#endif  // __APPLE__ && TARGET_OS_OSX
+#endif  // MOZC_ENABLE_POSIX_ZENZ_CLIENT
 
 }  // namespace
 }  // namespace session

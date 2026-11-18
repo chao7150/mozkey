@@ -276,7 +276,7 @@ class ScopedUserProfileForZenzFeedbackSessionTest {
   std::wstring profile_dir_;
 };
 
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
 
 class ScopedUserProfileForZenzFeedbackSessionTest {
  public:
@@ -299,7 +299,7 @@ class ScopedUserProfileForZenzFeedbackSessionTest {
   TempDirectory profile_dir_;
 };
 
-#endif  // defined(_WIN32) || defined(__APPLE__)
+#endif  // defined(_WIN32) || defined(__APPLE__) || Linux desktop
 
 void SetSendKeyCommandWithKeyString(const absl::string_view key_string,
                                     commands::Command* command) {
@@ -1590,7 +1590,7 @@ TEST_F(SessionTest, PendingZenzFeedbackStoresContextClassOnly) {
 
 TEST_F(SessionTest,
        ZenzFeedbackAcceptedRollbackIsDisabledAfterEnteringConfigIncognitoMode) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
 
@@ -1632,7 +1632,7 @@ TEST_F(SessionTest,
 }
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackPersistsImmediatelyAndBackspaceRollsBack) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
 
@@ -1670,7 +1670,7 @@ TEST_F(SessionTest,
 }
 
 TEST_F(SessionTest, PendingAcceptedZenzFeedbackResetContextKeepsAcceptance) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
 
@@ -1874,7 +1874,7 @@ CreateRecordingExternalLearningConverter(MockEngine* mock_engine);
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackImmediateMozcHistoryRollback) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -1929,7 +1929,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackImmediateMozcHistoryConfirmKeepsLearning) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -1966,7 +1966,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackUsesSingleMozcHistoryRollbackHandle) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -2016,7 +2016,7 @@ CreateRecordingExternalLearningConverter(MockEngine* mock_engine) {
 // Reproduction of a pending Zenz/Mozc learning rollback surviving a client
 // reverse-conversion followed by the feedback-bypass manual command.
 TEST_F(SessionTest, ZenzBypassAfterReverseConversionPreservesExternalLearningRevert) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
 
@@ -2094,7 +2094,7 @@ TEST_F(SessionTest, ZenzBypassAfterReverseConversionPreservesExternalLearningRev
 // Failed re-conversion must NOT transfer ownership away from the original
 // EngineConverter. The caller can still undo pending accepted Zenz learning.
 TEST_F(SessionTest, ZenzBypassFailedReconversionKeepsExternalLearningRevert) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
 
@@ -2226,7 +2226,7 @@ TEST_F(SessionTest, FailedAcceptedAppendUndoPreservesPriorFeedback) {
 }
 
 TEST_F(SessionTest, IndependentZenzLearningControlsAllEightCombinations) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   constexpr absl::string_view kKey = "かれはてんきです";
   constexpr absl::string_view kValue = "彼は天気です";
   for (int mask = 0; mask < 8; ++mask) {
@@ -2274,7 +2274,7 @@ TEST_F(SessionTest, IndependentZenzLearningControlsAllEightCombinations) {
 }
 
 TEST_F(SessionTest, IndependentZenzLearningUndoCompensatesRecordedEffects) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   constexpr absl::string_view kKey = "かれはてんきです";
   constexpr absl::string_view kValue = "彼は天気です";
   for (int mask = 1; mask < 8; ++mask) {
@@ -2318,7 +2318,7 @@ TEST_F(SessionTest, IndependentZenzLearningUndoCompensatesRecordedEffects) {
 }
 
 TEST_F(SessionTest, RecordingOffPreventsDeferredComparisonWithHistoryOn) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
   MockEngine engine;
@@ -2344,7 +2344,7 @@ TEST_F(SessionTest, RecordingOffPreventsDeferredComparisonWithHistoryOn) {
 }
 
 TEST_F(SessionTest, HistoryOnRecordingOffIsDisabledByPrivateInput) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
   MockEngine engine;
@@ -2442,7 +2442,7 @@ TEST_F(SessionTest, ZenzMozcHistoryLearningIsDisabledInPasswordField) {
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackLearnsReverseProjectedChangedSegment) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -2503,7 +2503,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackLearnsProjectedMultiSegmentCommit) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -2576,7 +2576,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackLearnsMozcNativeResegmentationFallback) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -2665,7 +2665,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackDoesNotLearnUnresolvedAggregateSegment) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -2722,7 +2722,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackKeepsMoreThanFourExactProjectedFallbacks) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -2768,7 +2768,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackKeepsMoreThanFourVerifiedNativeReranks) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -2815,7 +2815,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackKeepsNativePrefixAcrossSymbolSeparator) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -2916,7 +2916,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackLearnsLexicalCoreBeforeAttachedParenthesis) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -3008,7 +3008,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackHardensUnchangedIslandAgainstContextLoss) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -3133,7 +3133,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackContextLossProbePreservesTypedPrefix) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -3219,7 +3219,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackCapsContextLossProbeWork) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -3279,7 +3279,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackResolvesChangedLexicalIslandBeforeSymbol) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -3390,7 +3390,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackHardensSingleSegmentBeforeSymbol) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -3455,7 +3455,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackPrefersKnownBoundariesBeforeNativeResegmentation) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -3542,7 +3542,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackKeepsExplicitChangeWhenNativeCandidateIsTop) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -3604,7 +3604,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackDoesNotTransferSignalAcrossValueRepartition) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -3679,7 +3679,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackLearnsNativeBoundaryJoin) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -3744,7 +3744,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        PendingAcceptedZenzFeedbackSkipsReverseLearningWhenAlignmentBreaks) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<RecordingExternalLearningConverter> converter =
       CreateRecordingExternalLearningConverter(&engine);
@@ -3796,7 +3796,7 @@ TEST_F(SessionTest,
 #endif
 }
 
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
 void SetPendingRejectedZenzFeedbackForTest(SessionTestPeer* session_peer) {
   session_peer->context_()->set_state(ImeContext::CONVERSION);
   session_peer->live_conversion_active_() = true;
@@ -3811,12 +3811,12 @@ void SetPendingRejectedZenzFeedbackForTest(SessionTestPeer* session_peer) {
   session_peer->SetPendingZenzFeedbackRejected("space_revert_zenz_to_mozc");
   session_peer->context_()->set_state(ImeContext::PRECOMPOSITION);
 }
-#endif  // defined(_WIN32) || defined(__APPLE__)
+#endif  // defined(_WIN32) || defined(__APPLE__) || Linux desktop
 
 TEST_F(
     SessionTest,
     DirectCommitPunctuationAfterZenzSpaceRevertKeepsFeedbackUndoableByBackspace) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -3843,7 +3843,7 @@ TEST_F(
 TEST_F(
     SessionTest,
     DirectCommitPunctuationAfterZenzSpaceRevertKeepsFeedbackUndoableByCancelKey) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -3870,7 +3870,7 @@ TEST_F(
 TEST_F(
     SessionTest,
     DirectCommitPunctuationAfterZenzSpaceRevertConfirmsRejectionOnNextTextInput) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -3901,7 +3901,7 @@ TEST_F(
 #endif
 }
 TEST_F(SessionTest, PendingRejectedZenzFeedbackIsNeutralWithoutFinalCommit) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -3925,7 +3925,7 @@ TEST_F(SessionTest, PendingRejectedZenzFeedbackIsNeutralWithoutFinalCommit) {
 }
 
 TEST_F(SessionTest, PendingRejectedZenzFeedbackIsAcceptedWhenFinalCommitMatches) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -3968,7 +3968,7 @@ TEST_F(SessionTest, PendingRejectedZenzFeedbackIsAcceptedWhenFinalCommitMatches)
 }
 
 TEST_F(SessionTest, PendingRejectedZenzFeedbackIsRecordedWhenFinalCommitDiffers) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -4009,7 +4009,7 @@ TEST_F(SessionTest, PendingRejectedZenzFeedbackIsRecordedWhenFinalCommitDiffers)
 TEST_F(
     SessionTest,
     PendingRejectedZenzFeedbackIsConfirmedByPassThroughEnterAfterFinalCommit) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -4057,7 +4057,7 @@ TEST_F(
 }
 
 TEST_F(SessionTest, PendingShadowZenzFeedbackIgnoresDifferentFinalReading) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -4308,7 +4308,7 @@ TEST_F(SessionTest,
 }
 
 TEST_F(SessionTest, ZenzFeedbackFastPathDisabledByReuseToggle) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
   ScopedUserProfileForZenzFeedbackSessionTest profile;
@@ -4636,7 +4636,7 @@ TEST_F(SessionTest,
 }
 
 TEST_F(SessionTest, VisibleZenzCancelArmsKeyMatchedFinalComparison) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   constexpr absl::string_view kKey =
       "\xE3\x81\x8A\xE3\x81\x8A";
   constexpr absl::string_view kZenzValue =
@@ -4680,7 +4680,7 @@ TEST_F(SessionTest, VisibleZenzCancelArmsKeyMatchedFinalComparison) {
 
 TEST_F(SessionTest,
        VisibleZenzCancelThenHiraganaCommitRecordsRejection) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   constexpr absl::string_view kKey =
       "\xE3\x81\x8A\xE3\x81\x8A";
   constexpr absl::string_view kZenzValue =
@@ -4735,7 +4735,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        EditingAfterVisibleZenzCancelNeutralizesComparison) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -4765,7 +4765,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        DirectCommitPunctuationAfterVisibleZenzCancelRecordsRejection) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   constexpr absl::string_view kKey =
       "\xE3\x81\x8A\xE3\x81\x8A";
   constexpr absl::string_view kZenzValue =
@@ -4839,7 +4839,7 @@ TEST_F(SessionTest,
 
 TEST_F(SessionTest,
        DirectCommitPunctuationAfterVisibleZenzCancelKeepsFeedbackUndoable) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -8089,7 +8089,7 @@ TEST_F(SessionTest, StrictReadingOnAcceptsCompleteReading) {
 }
 
 TEST_F(SessionTest, StrictReadingOnRejectsTruncatedMultiSegmentFeedback) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
   ScopedUserProfileForZenzFeedbackSessionTest profile;
@@ -8135,7 +8135,7 @@ TEST_F(SessionTest, StrictReadingOnRejectsTruncatedMultiSegmentFeedback) {
 }
 
 TEST_F(SessionTest, StrictReadingOnAcceptsCompleteMultiSegmentFeedback) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
   ScopedUserProfileForZenzFeedbackSessionTest profile;
@@ -8225,7 +8225,7 @@ TEST_F(SessionTest, DeferredZenzAcceptedResultReplacesVisiblePreeditOnce) {
 }
 
 TEST_F(SessionTest, ConfigIncognitoModeIgnoresStoredZenzFeedbackDecision) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -8293,7 +8293,7 @@ TEST_F(SessionTest, ConfigIncognitoModeIgnoresStoredZenzFeedbackDecision) {
 #endif
 }
 TEST_F(SessionTest, AutoBlockedZenzResultRecordsMatchingShadowCommitAsAccepted) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -8380,7 +8380,7 @@ TEST_F(SessionTest, AutoBlockedZenzResultRecordsMatchingShadowCommitAsAccepted) 
 
 TEST_F(SessionTest,
        AutoBlockedZenzResultRecordsMismatchingShadowCommitAsRejected) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -8464,7 +8464,7 @@ TEST_F(SessionTest,
 }
 
 TEST_F(SessionTest, ShortReadingAutoBlockDoesNotOverrideFreshZenzByDefault) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -8534,7 +8534,7 @@ TEST_F(SessionTest, ShortReadingAutoBlockDoesNotOverrideFreshZenzByDefault) {
 }
 
 TEST_F(SessionTest, FeedbackAutoReuseOffIgnoresAutoBlockForFreshZenz) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
   ScopedUserProfileForZenzFeedbackSessionTest profile;
@@ -8591,7 +8591,7 @@ TEST_F(SessionTest, FeedbackAutoReuseOffIgnoresAutoBlockForFreshZenz) {
 }
 
 TEST_F(SessionTest, ManualHardRejectAppliesWhenAutomaticReuseOff) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
   ScopedUserProfileForZenzFeedbackSessionTest profile;
@@ -8641,7 +8641,7 @@ TEST_F(SessionTest, ManualHardRejectAppliesWhenAutomaticReuseOff) {
 }
 
 TEST_F(SessionTest, HardRejectedZenzResultDoesNotCreateShadowFeedback) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   MockEngine engine;
   std::shared_ptr<MockConverter> converter = CreateEngineConverterMock(&engine);
 
@@ -17895,7 +17895,7 @@ TEST_F(SessionTest, ZenzConversionCustomRevertPreservesMozcPreedit) {
 }
 
 TEST_F(SessionTest, ZenzCtrlDeleteHardBlocksAndRestoresMozc) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
   MockEngine engine;
@@ -17943,7 +17943,7 @@ TEST_F(SessionTest, ZenzCtrlDeleteHardBlocksAndRestoresMozc) {
 }
 
 TEST_F(SessionTest, ZenzCtrlDeleteIncognitoRevertsWithoutPersisting) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
   MockEngine engine;
@@ -18472,7 +18472,7 @@ TEST_F(SessionTest, ActualLiveInputZenzReplyRevertThenPhysicalBackspace) {
 // Zenz's automatic feedback during baseline conversion, and bypasses the
 // automatic minimum-reading-length gate without weakening output validation.
 TEST_F(SessionTest, ManualZenzWithoutFeedbackUsesRequestLocalPolicy) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
 #endif
@@ -18649,7 +18649,7 @@ TEST_F(SessionTest, ManualZenzBypassFailedReconversionKeepsOldCandidates) {
 
 // Statistical bypass must not override an explicit human hard-block.
 TEST_F(SessionTest, ManualZenzBypassPreservesExplicitHardBlock) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
   MockEngine engine;
@@ -18705,7 +18705,7 @@ TEST_F(SessionTest, ManualZenzBypassPreservesExplicitHardBlock) {
 
 // The original manual command still applies statistical auto-blocks.
 TEST_F(SessionTest, ManualZenzNormalCommandPreservesAutoBlock) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
   MockEngine engine;
@@ -18764,7 +18764,7 @@ TEST_F(SessionTest, ManualZenzNormalCommandPreservesAutoBlock) {
 
 // Bypassing past feedback does not disable newly-recorded acceptance.
 TEST_F(SessionTest, ManualZenzBypassRecordsAcceptedWhenEnabled) {
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
   ScopedUserProfileForZenzFeedbackSessionTest profile;
   ASSERT_TRUE(profile.ok());
   MockEngine engine;

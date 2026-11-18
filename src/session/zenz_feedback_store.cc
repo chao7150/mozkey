@@ -22,7 +22,9 @@
 
 #if defined(_WIN32)
 #include <windows.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || \
+    (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
+#define MOZC_ZENZ_FEEDBACK_POSIX 1
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
@@ -277,7 +279,7 @@ void StoreDebugOutput(absl::string_view) {}
 
 #endif
 
-#if defined(__APPLE__)
+#if defined(MOZC_ZENZ_FEEDBACK_POSIX)
 std::string GetFeedbackDir() {
   const std::string dir = SystemUtil::GetUserProfileDirectory();
   if (dir.empty()) {
@@ -298,7 +300,7 @@ std::string GetFeedbackPath() {
   }
   return FileUtil::JoinPath(dir, "zenz_feedback.tsv");
 }
-#endif  // defined(__APPLE__)
+#endif  // defined(MOZC_ZENZ_FEEDBACK_POSIX)
 
 std::string EscapeTsv(absl::string_view s) {
   std::string out;
@@ -752,7 +754,7 @@ void InvalidateFeedbackRecordsCache() {
   std::lock_guard<std::mutex> lock(g_feedback_records_cache_mutex);
   g_feedback_records_cache = FeedbackRecordsCache();
 }
-#elif defined(__APPLE__)
+#elif defined(MOZC_ZENZ_FEEDBACK_POSIX)
 struct FeedbackFileStamp {
   bool exists = false;
   time_t last_write_seconds = 0;
@@ -791,8 +793,13 @@ FeedbackFileStamp GetFeedbackFileStamp(absl::string_view path) {
   }
 
   stamp.exists = true;
+#if defined(__APPLE__)
   stamp.last_write_seconds = info.st_mtimespec.tv_sec;
   stamp.last_write_nanoseconds = info.st_mtimespec.tv_nsec;
+#else
+  stamp.last_write_seconds = info.st_mtim.tv_sec;
+  stamp.last_write_nanoseconds = info.st_mtim.tv_nsec;
+#endif
   stamp.file_size = static_cast<uint64_t>(info.st_size);
   return stamp;
 }
@@ -1016,7 +1023,7 @@ std::vector<ParsedFeedbackRecord> LoadFeedbackRecords() {
   g_feedback_records_cache.records = records;
 
   return records;
-#elif defined(__APPLE__)
+#elif defined(MOZC_ZENZ_FEEDBACK_POSIX)
   const std::string path = GetFeedbackPath();
   const FeedbackFileStamp stamp = GetFeedbackFileStamp(path);
 
@@ -1172,7 +1179,7 @@ bool WriteFeedbackRecordsAtomically(
   InvalidateFeedbackRecordsCache();
   return true;
 }
-#elif defined(__APPLE__)
+#elif defined(MOZC_ZENZ_FEEDBACK_POSIX)
 bool WriteRecordsToPath(
     absl::string_view path,
     const std::vector<ParsedFeedbackRecord>& records) {
@@ -1274,7 +1281,7 @@ bool AppendRecord(absl::string_view action,
   }
 
   std::ofstream file(path_w, std::ios::binary | std::ios::app);
-#elif defined(__APPLE__)
+#elif defined(MOZC_ZENZ_FEEDBACK_POSIX)
   const std::string path = GetFeedbackPath();
   if (path.empty()) {
     return false;
@@ -1592,7 +1599,7 @@ std::vector<ZenzFeedbackEntry> ZenzFeedbackStore::ListEntries(
 bool ZenzFeedbackStore::ExportToFile(absl::string_view path) const {
 #if defined(_WIN32)
   return ExportToFile(Utf8ToWide(path));
-#elif defined(__APPLE__)
+#elif defined(MOZC_ZENZ_FEEDBACK_POSIX)
   if (path.empty()) {
     return false;
   }
@@ -1610,7 +1617,7 @@ bool ZenzFeedbackStore::ImportFromFile(
     ZenzFeedbackImportMode mode) {
 #if defined(_WIN32)
   return ImportFromFile(Utf8ToWide(path), mode);
-#elif defined(__APPLE__)
+#elif defined(MOZC_ZENZ_FEEDBACK_POSIX)
   if (path.empty()) {
     return false;
   }

@@ -250,6 +250,11 @@ mozc_cc_library(
             "//base:process",
             "//base:system_util",
         ],
+        oss_linux = [
+            "//base:file_util",
+            "//base:process",
+            "//base:system_util",
+        ],
     ),
 )
 
@@ -262,6 +267,9 @@ mozc_cc_test(
         "//testing:gunit_main",
     ] + mozc_select(
         macos = [
+            "//base:process",
+        ],
+        oss_linux = [
             "//base:process",
         ],
     ),

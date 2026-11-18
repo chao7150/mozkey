@@ -8,6 +8,13 @@
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #if TARGET_OS_OSX
+#define MOZC_ENABLE_POSIX_ZENZ_CLIENT 1
+#endif  // TARGET_OS_OSX
+#elif defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS)
+#define MOZC_ENABLE_POSIX_ZENZ_CLIENT 1
+#endif  // __APPLE__ / Linux desktop
+
+#ifdef MOZC_ENABLE_POSIX_ZENZ_CLIENT
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -19,8 +26,7 @@
 #include "base/file_util.h"
 #include "base/process.h"
 #include "base/system_util.h"
-#endif  // TARGET_OS_OSX
-#endif  // __APPLE__
+#endif  // MOZC_ENABLE_POSIX_ZENZ_CLIENT
 
 #include "session/zenz_live_corrector.h"
 #include "session/zenz_named_pipe_client.h"
@@ -30,14 +36,14 @@
 namespace mozc {
 namespace session {
 
-#if defined(__APPLE__) && TARGET_OS_OSX
+#ifdef MOZC_ENABLE_POSIX_ZENZ_CLIENT
 // Testable implementation shared by the production scorer launcher and the
-// macOS regression test. Do not alter child ownership or SIGCHLD handling.
+// POSIX regression test. Do not alter child ownership or SIGCHLD handling.
 namespace internal {
-// MozcConverter is the scorer's parent and lives for the whole login session.
-// The scorer can exit on its own (startup failure, losing the singleton lock
-// to an already running scorer, or a crash), so it must be reaped here or it
-// lingers as a zombie child of the converter.
+// The converter/server is the scorer's parent and lives for the whole login
+// session. The scorer can exit on its own (startup failure, losing the
+// singleton lock to an already running scorer, or a crash), so it must be
+// reaped here or it lingers as a zombie child.
 void ReapScorerAsync(pid_t pid) {
   try {
     std::thread([pid] {
@@ -51,18 +57,18 @@ void ReapScorerAsync(pid_t pid) {
 }
 
 }  // namespace internal
-#endif  // __APPLE__ && TARGET_OS_OSX
+#endif  // MOZC_ENABLE_POSIX_ZENZ_CLIENT
 
 namespace {
 
-#if defined(__APPLE__) && TARGET_OS_OSX
+#ifdef MOZC_ENABLE_POSIX_ZENZ_CLIENT
 
 constexpr char kZenzRuntimeDirectory[] = "ZenzRuntime";
 constexpr char kZenzScorerExecutable[] = "mozc_zenz_scorer";
 constexpr auto kScorerLaunchThrottle = std::chrono::seconds(2);
 
-bool LaunchMacZenzScorer() {
-  // MozcConverter is normally a singleton, but several Zenz worker requests
+bool LaunchPosixZenzScorer() {
+  // The converter is normally a singleton, but several Zenz worker requests
   // can observe the same cold start. Serialize the short spawn operation and
   // treat a recent successful launch as one already in progress.
   static std::mutex launch_mutex;
@@ -95,17 +101,17 @@ bool LaunchMacZenzScorer() {
   return true;
 }
 
-#endif  // __APPLE__ && TARGET_OS_OSX
+#endif  // MOZC_ENABLE_POSIX_ZENZ_CLIENT
 
 }  // namespace
 
 std::unique_ptr<ZenzClient> CreateZenzClient() {
-#if defined(__APPLE__) && TARGET_OS_OSX
+#ifdef MOZC_ENABLE_POSIX_ZENZ_CLIENT
   return std::make_unique<ZenzUnixSocketClient>(
-      ::mozc::zenz::GetZenzUnixSocketPath(), &LaunchMacZenzScorer);
+      ::mozc::zenz::GetZenzUnixSocketPath(), &LaunchPosixZenzScorer);
 #else
   return std::make_unique<ZenzNamedPipeClient>();
-#endif  // __APPLE__ && TARGET_OS_OSX
+#endif  // MOZC_ENABLE_POSIX_ZENZ_CLIENT
 }
 
 }  // namespace session

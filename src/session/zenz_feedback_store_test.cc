@@ -111,7 +111,8 @@ class ScopedUserProfileForZenzFeedbackStoreTest {
   std::wstring profile_dir_;
 };
 
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || \
+    (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
 
 class ScopedUserProfileForZenzFeedbackStoreTest {
  public:
@@ -144,9 +145,10 @@ class ScopedUserProfileForZenzFeedbackStoreTest {
   TempDirectory profile_dir_;
 };
 
-#endif  // defined(_WIN32) || defined(__APPLE__)
+#endif  // defined(_WIN32) || defined(__APPLE__) || Linux desktop
 
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || \
+    (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
 
 TEST(ZenzFeedbackStoreTest, GetAcceptedCandidatesAllowsSingleAcceptedAndSorts) {
   ScopedUserProfileForZenzFeedbackStoreTest profile;

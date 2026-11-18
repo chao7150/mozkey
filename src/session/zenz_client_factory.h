@@ -8,7 +8,9 @@
 #if TARGET_OS_OSX
 #include <sys/types.h>
 #endif  // TARGET_OS_OSX
-#endif  // __APPLE__
+#elif defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS)
+#include <sys/types.h>
+#endif  // __APPLE__ / Linux desktop
 
 namespace mozc {
 namespace session {
@@ -18,19 +20,20 @@ class ZenzClient;
 // Creates the platform transport used by ZenzLiveCorrector.
 //
 // This factory keeps Session independent from concrete IPC transports.  The
-// Windows uses the existing named-pipe client. macOS uses a local Unix-domain
-// socket client. Other platforms retain the unavailable named-pipe fallback
-// until a platform transport is explicitly implemented.
+// Windows uses the existing named-pipe client. macOS and desktop Linux use a
+// local Unix-domain socket client. Other platforms retain the unavailable
+// named-pipe fallback until a platform transport is explicitly implemented.
 std::unique_ptr<ZenzClient> CreateZenzClient();
 
-#if defined(__APPLE__) && TARGET_OS_OSX
+#if (defined(__APPLE__) && TARGET_OS_OSX) || \
+    (defined(__linux__) && !defined(__ANDROID__) && !defined(OS_CHROMEOS))
 namespace internal {
 // Starts the asynchronous waitpid() reaper for a child owned by this process.
-// Exposed for the macOS process-lifecycle regression tests; callers must pass
+// Exposed for the POSIX process-lifecycle regression tests; callers must pass
 // only a positive PID returned by a successful child spawn.
 void ReapScorerAsync(pid_t pid);
 }  // namespace internal
-#endif  // __APPLE__ && TARGET_OS_OSX
+#endif  // POSIX Zenz client
 
 }  // namespace session
 }  // namespace mozc
