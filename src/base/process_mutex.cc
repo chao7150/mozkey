@@ -187,8 +187,13 @@ class FileLockManager {
 
     const pfstring pf_filename = to_pfstring(filename);
     chmod(pf_filename.c_str(), 0600);  // write temporary
+#ifdef O_CLOEXEC
+    const int fd = ::open(pf_filename.c_str(),
+                          O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+#else
     const int fd =
         ::open(pf_filename.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0600);
+#endif
     if (fd < 0) {
       return absl::ErrnoToStatus(errno, "open() failed");
     }

@@ -220,9 +220,23 @@ bool Process::SpawnProcess(absl::string_view path, absl::string_view arg,
   // posix_spawn returns 0 even if kMozcServer doesn't exist, because
   // the return value of posix_spawn is basically determined
   // by the return value of fork().
-  const int result =
-      ::posix_spawn(&tmp_pid, pf_path.c_str(), nullptr, nullptr,
-                    const_cast<char* const*>(argv.get()), environ);
+  posix_spawn_file_actions_t file_actions;
+  const bool has_file_actions =
+      (::posix_spawn_file_actions_init(&file_actions) == 0);
+#if defined(__linux__) && defined(__GLIBC__) && \
+    (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 34))
+  if (has_file_actions) {
+    // Do not leak server locks, IPC sockets, or active client connections into
+    // long-lived background child processes such as mozc_zenz_scorer.
+    ::posix_spawn_file_actions_addclosefrom_np(&file_actions, 3);
+  }
+#endif
+  const int result = ::posix_spawn(
+      &tmp_pid, pf_path.c_str(), has_file_actions ? &file_actions : nullptr,
+      nullptr, const_cast<char* const*>(argv.get()), environ);
+  if (has_file_actions) {
+    ::posix_spawn_file_actions_destroy(&file_actions);
+  }
   if (result == 0) {
     MOZC_VLOG(1) << "posix_spawn: child pid is " << tmp_pid;
   } else {

@@ -256,7 +256,11 @@ void IPCClient::Init(absl::string_view name,
     if (server_address.size() >= UNIX_PATH_MAX) {
       LOG(WARNING) << "too long path: " << server_address;
     }
-    socket_ = socket(PF_UNIX, SOCK_STREAM, 0);
+#if defined(__linux__) && defined(SOCK_CLOEXEC)
+    socket_ = ::socket(PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+#else
+    socket_ = ::socket(PF_UNIX, SOCK_STREAM, 0);
+#endif
     if (socket_ < 0) {
       LOG(WARNING) << "socket failed: " << strerror(errno);
       continue;
@@ -367,7 +371,11 @@ IPCServer::IPCServer(absl::string_view name, int32_t num_connections,
     }
   }
 
+#if defined(__linux__) && defined(SOCK_CLOEXEC)
+  socket_ = ::socket(PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+#else
   socket_ = ::socket(PF_UNIX, SOCK_STREAM, 0);
+#endif
   if (socket_ < 0) {
     LOG(WARNING) << "socket failed: " << strerror(errno);
     return;
@@ -428,12 +436,22 @@ void IPCServer::Loop() {
   std::string request;
   std::string response;
   while (!error && !terminate_.HasBeenNotified()) {
+#if defined(__linux__) && defined(SOCK_CLOEXEC)
+    const int new_sock = ::accept4(socket_, nullptr, nullptr, SOCK_CLOEXEC);
+#else
     const int new_sock = ::accept(socket_, nullptr, nullptr);
+    if (new_sock >= 0) {
+      // Prevent concurrent posix_spawn (e.g. Zenz scorer launch) from
+      // inheriting the accepted client socket and blocking client EOF.
+      SetCloseOnExecFlag(new_sock);
+    }
+#endif
     if (new_sock < 0) {
       LOG(FATAL) << "accept() failed: " << strerror(errno);
       return;
     }
     if (!IsPeerValid(new_sock, &pid)) {
+      ::close(new_sock);
       continue;
     }
 
