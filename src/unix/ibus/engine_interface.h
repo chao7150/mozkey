@@ -64,8 +64,19 @@ class EngineInterface {
   // The interface function for the "focus-in" signal
   virtual void FocusIn(IbusEngineWrapper* engine) = 0;
 
+  // The interface function for the "focus-in-id" signal
+  virtual void FocusInId(IbusEngineWrapper* engine, const char* object_path,
+                         const char* client) {
+    FocusIn(engine);
+  }
+
   // The interface function for the "focus-out" signal
   virtual void FocusOut(IbusEngineWrapper* engine) = 0;
+
+  // The interface function for the "focus-out-id" signal
+  virtual void FocusOutId(IbusEngineWrapper* engine, const char* object_path) {
+    FocusOut(engine);
+  }
 
   // The interface function for the "page-down" signal
   virtual void PageDown(IbusEngineWrapper* engine) = 0;

@@ -61,7 +61,10 @@ class EngineRegistrar {
   static void Disable(IBusEngine* engine);
   static void Enable(IBusEngine* engine);
   static void FocusIn(IBusEngine* engine);
+  static void FocusInId(IBusEngine* engine, const gchar* object_path,
+                        const gchar* client);
   static void FocusOut(IBusEngine* engine);
+  static void FocusOutId(IBusEngine* engine, const gchar* object_path);
   static void PageDown(IBusEngine* engine);
   static void PageUp(IBusEngine* engine);
   static gboolean ProcessKeyEvent(IBusEngine* engine, guint keyval,

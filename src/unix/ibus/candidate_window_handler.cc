@@ -33,6 +33,7 @@
 #include <unistd.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <variant>
 
@@ -101,6 +102,7 @@ CandidateWindowHandler::CandidateWindowHandler(
     std::unique_ptr<renderer::RendererInterface> renderer)
     : renderer_(std::move(renderer)),
       last_update_output_(std::make_unique<commands::Output>()),
+      stage_monitor_resolver_(std::make_unique<WaylandStageMonitorResolver>()),
       use_custom_font_description_(false) {}
 
 CandidateWindowHandler::~CandidateWindowHandler() {}
@@ -153,7 +155,25 @@ bool CandidateWindowHandler::SendUpdateCommand(IbusEngineWrapper* engine,
   appinfo->set_input_framework(RendererCommand::ApplicationInfo::IBus);
   appinfo->set_pango_font_description(GetFontDescription());
 
+  if (visibility && is_wayland_stage_client_ && stage_monitor_resolver_) {
+    if (const std::optional<StageMonitor> monitor =
+            stage_monitor_resolver_->ResolveMonitorForRect(*preedit_rectangle);
+        monitor.has_value()) {
+      appinfo->set_wayland_stage_monitor_name(monitor->connector);
+      auto* monitor_rect = appinfo->mutable_wayland_stage_monitor_rect();
+      monitor_rect->set_left(monitor->x);
+      monitor_rect->set_top(monitor->y);
+      monitor_rect->set_right(monitor->x + monitor->width);
+      monitor_rect->set_bottom(monitor->y + monitor->height);
+    }
+  }
+
   return renderer_->ExecCommand(command);
+}
+
+void CandidateWindowHandler::SetFocusClient(absl::string_view client) {
+  is_wayland_stage_client_ = (client == "gnome-shell");
+  preedit_begin_.Clear();
 }
 
 void CandidateWindowHandler::Update(IbusEngineWrapper* engine,

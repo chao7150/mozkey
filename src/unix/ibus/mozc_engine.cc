@@ -356,6 +356,17 @@ void MozcEngine::Enable(IbusEngineWrapper* engine) {
 }
 
 void MozcEngine::FocusIn(IbusEngineWrapper* engine) {
+  FocusInWithClient(engine, "");
+}
+
+void MozcEngine::FocusInId(IbusEngineWrapper* engine, const char* object_path,
+                           const char* client) {
+  FocusInWithClient(engine, client != nullptr ? client : "");
+}
+
+void MozcEngine::FocusInWithClient(IbusEngineWrapper* engine,
+                                   absl::string_view client) {
+  GetCandidateWindowHandler(engine)->SetFocusClient(client);
   delayed_commands_.Activate(G_OBJECT(engine->GetEngine()));
   property_handler_->Register(engine);
   UpdatePreeditMethod();
@@ -364,6 +375,7 @@ void MozcEngine::FocusIn(IbusEngineWrapper* engine) {
 void MozcEngine::FocusOut(IbusEngineWrapper* engine) {
   delayed_commands_.Deactivate(G_OBJECT(engine->GetEngine()));
   GetCandidateWindowHandler(engine)->Hide(engine);
+  GetCandidateWindowHandler(engine)->SetFocusClient("");
   property_handler_->ResetContentType(engine);
 
   // Note that the preedit string (if any) will be committed by IBus runtime
@@ -375,6 +387,10 @@ void MozcEngine::FocusOut(IbusEngineWrapper* engine) {
   // See https://github.com/google/mozc/issues/255 for details.
   RevertSession(engine);
   SyncData(false);
+}
+
+void MozcEngine::FocusOutId(IbusEngineWrapper* engine, const char* object_path) {
+  FocusOut(engine);
 }
 
 void MozcEngine::PageDown(IbusEngineWrapper* engine) {

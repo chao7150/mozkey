@@ -367,6 +367,35 @@ mozc_cc_test(
 )
 
 mozc_cc_library(
+    name = "wayland_stage_monitor",
+    srcs = mozc_select(linux = ["wayland_stage_monitor.cc"]),
+    hdrs = mozc_select(linux = ["wayland_stage_monitor.h"]),
+    copts = mozc_select(linux = ["-Ithird_party/glib"]),
+    deps = [
+        "//protocol:renderer_cc_proto",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/time",
+        "@com_google_absl//absl/types:span",
+    ] + mozc_select(
+        linux = ["//third_party/glib/gio"],
+        oss_linux = ["@ibus//:ibus"],
+    ),
+)
+
+mozc_cc_test(
+    name = "wayland_stage_monitor_test",
+    size = "small",
+    srcs = mozc_select(linux = ["wayland_stage_monitor_test.cc"]),
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":wayland_stage_monitor",
+        "//protocol:renderer_cc_proto",
+        "//testing:gunit_main",
+    ],
+)
+
+mozc_cc_library(
     name = "candidate_window_handler",
     srcs = mozc_select(linux = ["candidate_window_handler.cc"]),
     hdrs = mozc_select(
@@ -378,6 +407,7 @@ mozc_cc_library(
     copts = mozc_select(linux = ["-Ithird_party/glib"]),
     deps = [
         ":ibus_header",
+        ":wayland_stage_monitor",
         "//base:coordinates",
         "//base:port",
         "//protocol:candidate_window_cc_proto",
@@ -407,6 +437,7 @@ mozc_cc_test(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":candidate_window_handler",
+        ":wayland_stage_monitor",
         "//base:coordinates",
         "//base/protobuf:text_format",
         "//protocol:candidate_window_cc_proto",

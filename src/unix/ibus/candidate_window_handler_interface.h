@@ -32,6 +32,7 @@
 
 #include <string>
 
+#include "absl/strings/string_view.h"
 #include "unix/ibus/ibus_wrapper.h"
 
 namespace mozc {
@@ -63,6 +64,10 @@ class CandidateWindowHandlerInterface {
 
   // Shows candidate window.
   virtual void Show(IbusEngineWrapper* engine) = 0;
+
+  // Records the IBus client identity from FocusInId (e.g. "gnome-shell" for
+  // Wayland Stage clients) to disambiguate cursor coordinate spaces.
+  virtual void SetFocusClient(absl::string_view client) {}
 
   // Following methods handle property-changed events relevant to ibus-panel.
   // |custom_font_description| should be a string representation of

@@ -80,7 +80,10 @@ class MozcEngine : public EngineInterface {
   void Disable(IbusEngineWrapper* engine) override;
   void Enable(IbusEngineWrapper* engine) override;
   void FocusIn(IbusEngineWrapper* engine) override;
+  void FocusInId(IbusEngineWrapper* engine, const char* object_path,
+                 const char* client) override;
   void FocusOut(IbusEngineWrapper* engine) override;
+  void FocusOutId(IbusEngineWrapper* engine, const char* object_path) override;
   void PageDown(IbusEngineWrapper* engine) override;
   void PageUp(IbusEngineWrapper* engine) override;
   bool ProcessKeyEvent(IbusEngineWrapper* engine, uint keyval, uint keycode,
@@ -132,6 +135,7 @@ class MozcEngine : public EngineInterface {
 
   CandidateWindowHandlerInterface* GetCandidateWindowHandler(
       IbusEngineWrapper* engine);
+  void FocusInWithClient(IbusEngineWrapper* engine, absl::string_view client);
 
   absl::Time last_sync_time_;
   std::unique_ptr<KeyEventHandler> key_event_handler_;

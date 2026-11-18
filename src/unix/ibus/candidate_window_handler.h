@@ -39,6 +39,7 @@
 #include "renderer/renderer_interface.h"
 #include "unix/ibus/candidate_window_handler_interface.h"
 #include "unix/ibus/ibus_wrapper.h"
+#include "unix/ibus/wayland_stage_monitor.h"
 
 namespace mozc {
 namespace ibus {
@@ -58,6 +59,7 @@ class CandidateWindowHandler : public CandidateWindowHandlerInterface {
   virtual void UpdateCursorRect(IbusEngineWrapper* engine);
   virtual void Hide(IbusEngineWrapper* engine);
   virtual void Show(IbusEngineWrapper* engine);
+  void SetFocusClient(absl::string_view client) override;
 
   virtual void OnIBusCustomFontDescriptionChanged(
       const std::string& custom_font_description);
@@ -76,11 +78,13 @@ class CandidateWindowHandler : public CandidateWindowHandlerInterface {
 
   std::unique_ptr<renderer::RendererInterface> renderer_;
   std::unique_ptr<commands::Output> last_update_output_;
+  std::unique_ptr<WaylandStageMonitorResolver> stage_monitor_resolver_;
 
  private:
   std::string GetFontDescription() const;
   std::string custom_font_description_;
   bool use_custom_font_description_;
+  bool is_wayland_stage_client_ = false;
   std::unique_ptr<GsettingsObserver> settings_observer_;
   commands::RendererCommand::Rectangle preedit_begin_;
 };

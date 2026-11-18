@@ -53,6 +53,13 @@ IBusEngineClass* g_parent_class = nullptr;
 GObject* IBusMozcEngineClassConstructor(
     GType type, uint n_construct_properties,
     GObjectConstructParam* construct_properties) {
+  // Enable IBus FocusInId/FocusOutId so GNOME Shell Wayland clients report
+  // client="gnome-shell" while X11/XWayland clients report non-Wayland names.
+  for (uint i = 0; i < n_construct_properties; ++i) {
+    if (g_strcmp0(construct_properties[i].pspec->name, "has-focus-id") == 0) {
+      g_value_set_boolean(construct_properties[i].value, TRUE);
+    }
+  }
   return G_OBJECT_CLASS(g_parent_class)
       ->constructor(type, n_construct_properties, construct_properties);
 }
@@ -112,7 +119,9 @@ bool EngineRegistrar::Register(IBusEngineClass* engine_class) {
   engine_class->disable = Disable;
   engine_class->enable = Enable;
   engine_class->focus_in = FocusIn;
+  engine_class->focus_in_id = FocusInId;
   engine_class->focus_out = FocusOut;
+  engine_class->focus_out_id = FocusOutId;
   engine_class->page_down = PageDown;
   engine_class->page_up = PageUp;
   engine_class->process_key_event = ProcessKeyEvent;
@@ -136,7 +145,9 @@ EngineInterface* EngineRegistrar::Unregister(IBusEngineClass* engine_class) {
   engine_class->disable = nullptr;
   engine_class->enable = nullptr;
   engine_class->focus_in = nullptr;
+  engine_class->focus_in_id = nullptr;
   engine_class->focus_out = nullptr;
+  engine_class->focus_out_id = nullptr;
   engine_class->page_down = nullptr;
   engine_class->page_up = nullptr;
   engine_class->process_key_event = nullptr;
@@ -184,9 +195,22 @@ void EngineRegistrar::FocusIn(IBusEngine* engine) {
   g_engine->FocusIn(&engine_wrapper);
 }
 
+void EngineRegistrar::FocusInId(IBusEngine* engine, const gchar* object_path,
+                                const gchar* client) {
+  IbusEngineWrapper engine_wrapper(engine);
+  g_engine->FocusInId(&engine_wrapper, object_path != nullptr ? object_path : "",
+                      client != nullptr ? client : "");
+}
+
 void EngineRegistrar::FocusOut(IBusEngine* engine) {
   IbusEngineWrapper engine_wrapper(engine);
   g_engine->FocusOut(&engine_wrapper);
+}
+
+void EngineRegistrar::FocusOutId(IBusEngine* engine, const gchar* object_path) {
+  IbusEngineWrapper engine_wrapper(engine);
+  g_engine->FocusOutId(&engine_wrapper,
+                       object_path != nullptr ? object_path : "");
 }
 
 void EngineRegistrar::PageDown(IBusEngine* engine) {

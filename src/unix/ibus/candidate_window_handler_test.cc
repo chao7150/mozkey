@@ -28,6 +28,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "unix/ibus/candidate_window_handler.h"
+#include "unix/ibus/wayland_stage_monitor.h"
 
 #include <unistd.h>  // for getpid()
 
@@ -72,6 +73,7 @@ class TestableCandidateWindowHandler : public CandidateWindowHandler {
   using CandidateWindowHandler::last_update_output_;
   using CandidateWindowHandler::renderer_;
   using CandidateWindowHandler::SendUpdateCommand;
+  using CandidateWindowHandler::stage_monitor_resolver_;
 };
 
 namespace {
@@ -349,6 +351,76 @@ TEST(CandidateWindowHandlerTest, ShowTest) {
   EXPECT_CALL_EXEC_COMMAND(*renderer_mock_ptr, VisibilityEq(true),
                            PreeditRectangleEq(kExpectedCursorArea));
   candidate_window_handler.Show(&engine);
+}
+
+TEST(CandidateWindowHandlerTest, WaylandStageMetadataForGnomeShellClient) {
+  IBusEngine ibus_engine = {};
+  ibus_engine.cursor_area.x = 2500;
+  ibus_engine.cursor_area.y = 500;
+  ibus_engine.cursor_area.width = 1;
+  ibus_engine.cursor_area.height = 20;
+  IbusEngineWrapper engine(&ibus_engine);
+
+  auto renderer_mock = std::make_unique<RendererMock>();
+  RendererMock* renderer_mock_ptr = renderer_mock.get();
+  TestableCandidateWindowHandler handler(std::move(renderer_mock));
+  int resolver_calls = 0;
+  handler.stage_monitor_resolver_ =
+      std::make_unique<WaylandStageMonitorResolver>(
+          [&](std::vector<StageMonitor>* monitors) {
+            ++resolver_calls;
+            *monitors = {
+                {"DP-4", 0, 0, 1920, 1080},
+                {"DP-3", 1920, 0, 2560, 1440},
+            };
+            return true;
+          });
+
+  Output output;
+  auto* cw = output.mutable_candidate_window();
+  auto* cand = cw->add_candidate();
+  cand->set_index(0);
+  cand->set_value("candidate");
+
+  // Wayland client via gnome-shell attaches stage monitor metadata when shown.
+  handler.SetFocusClient("gnome-shell");
+  RendererCommand captured_wayland_show;
+  EXPECT_CALL(*renderer_mock_ptr, ExecCommand(::testing::_))
+      .WillOnce(::testing::DoAll(::testing::SaveArg<0>(&captured_wayland_show),
+                                 Return(true)));
+  handler.Update(&engine, output);
+  EXPECT_EQ(resolver_calls, 1);
+  EXPECT_EQ(
+      captured_wayland_show.application_info().wayland_stage_monitor_name(),
+      "DP-3");
+  const auto& mon_rect =
+      captured_wayland_show.application_info().wayland_stage_monitor_rect();
+  EXPECT_EQ(mon_rect.left(), 1920);
+  EXPECT_EQ(mon_rect.top(), 0);
+  EXPECT_EQ(mon_rect.right(), 4480);
+  EXPECT_EQ(mon_rect.bottom(), 1440);
+
+  // Hiding does not emit or resolve monitor metadata.
+  RendererCommand captured_hide;
+  EXPECT_CALL(*renderer_mock_ptr, ExecCommand(::testing::_))
+      .WillOnce(
+          ::testing::DoAll(::testing::SaveArg<0>(&captured_hide), Return(true)));
+  handler.Hide(&engine);
+  EXPECT_FALSE(
+      captured_hide.application_info().has_wayland_stage_monitor_name());
+  EXPECT_EQ(resolver_calls, 1);
+
+  // Switching focus to an X11/XWayland client disables stage metadata.
+  handler.SetFocusClient("ibus-xim");
+  RendererCommand captured_x11_show;
+  EXPECT_CALL(*renderer_mock_ptr, ExecCommand(::testing::_))
+      .WillOnce(::testing::DoAll(::testing::SaveArg<0>(&captured_x11_show),
+                                 Return(true)));
+  handler.Update(&engine, output);
+  EXPECT_FALSE(
+      captured_x11_show.application_info().has_wayland_stage_monitor_name());
+  EXPECT_FALSE(
+      captured_x11_show.application_info().has_wayland_stage_monitor_rect());
 }
 
 }  // namespace ibus

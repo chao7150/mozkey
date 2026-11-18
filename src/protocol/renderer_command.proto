@@ -163,6 +163,13 @@ message RendererCommand {
 
     // used in Windows:
     optional IndicatorInfo indicator_info = 14;
+
+    // Mozkey Wayland extension:
+    // Connector name and GNOME Mutter Stage rectangle for the monitor owning
+    // `preedit_rectangle` when IBus receives Wayland Stage coordinates from
+    // `gnome-shell` while `mozc_renderer` renders via XWayland/xcb.
+    optional string wayland_stage_monitor_name = 1001;
+    optional Rectangle wayland_stage_monitor_rect = 1002;
   }
 
   optional ApplicationInfo application_info = 5;
